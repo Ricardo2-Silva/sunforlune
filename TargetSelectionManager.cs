@@ -1,15 +1,16 @@
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
 /// <summary>
-/// Gerenciador central do sistema de sele��o de alvos.
+/// Gerenciador central do sistema de seleção de alvos.
 /// </summary>
 public class TargetSelectionManager : MonoBehaviour
 {
     public static TargetSelectionManager Instance { get; private set; }
 
-    [Header("Configura��es")]
+    [Header("Configurações")]
     public KeyCode deselectKey = KeyCode.Escape;
     public KeyCode nextTargetKey = KeyCode.Tab;
     public float maxTabDistance = 10f;
@@ -26,8 +27,8 @@ public class TargetSelectionManager : MonoBehaviour
 
     public Transform playerTransform;
 
-    public System.Action<TargetableEntity> OnTargetSelected;
-    public System.Action OnTargetDeselected;
+    public Action<TargetableEntity> OnTargetSelected;
+    public Action OnTargetDeselected;
 
     private void Awake()
     {
@@ -56,24 +57,15 @@ public class TargetSelectionManager : MonoBehaviour
         var controlled = PokemonSwitchManager.Instance.GetControlledMember();
         if (controlled != null)
         {
-            Transform root = controlled.transform.parent != null
-                ? controlled.transform.parent
-                : controlled.transform;
+            Transform root = controlled.transform.parent != null ? controlled.transform.parent : controlled.transform;
             playerTransform = root;
         }
     }
 
     private void HandleInput()
     {
-        if (Input.GetKeyDown(deselectKey))
-        {
-            DeselectTarget();
-        }
-
-        if (Input.GetKeyDown(nextTargetKey))
-        {
-            SelectNextTarget();
-        }
+        if (Input.GetKeyDown(deselectKey)) DeselectTarget();
+        if (Input.GetKeyDown(nextTargetKey)) SelectNextTarget();
     }
 
     private void CheckAutoDeselectByDistance()
@@ -89,47 +81,41 @@ public class TargetSelectionManager : MonoBehaviour
     }
 
     #region Gerenciamento de Alvos
-
     public void RegisterTarget(TargetableEntity target)
     {
         if (target != null && !allTargets.Contains(target))
-        {
             allTargets.Add(target);
-        }
     }
 
     public void UnregisterTarget(TargetableEntity target)
     {
         allTargets.Remove(target);
-
-        if (currentSelectedTarget == target)
-        {
-            DeselectTarget();
-        }
+        if (currentSelectedTarget == target) DeselectTarget();
+        if (currentHoveredTarget == target) currentHoveredTarget = null;
     }
 
     public void SelectTarget(TargetableEntity target, bool isAutoSelection = false)
     {
         if (target == null || !target.isTargetable) return;
-
         if (isAutoSelection && currentSelectedTarget != null) return;
+        if (currentSelectedTarget == target) return; // Previne piscar a UI se já estiver selecionado
 
         bool altPressionado = Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
 
         if (!altPressionado && IsSelfTarget(target)) return;
 
         if (currentSelectedTarget != null)
-        {
             currentSelectedTarget.SetSelectedState(false);
-        }
 
         currentSelectedTarget = target;
         target.SetSelectedState(true);
 
+        // Envia os dados iniciais do alvo para o HUD (as atualizações dinâmicas de HP ocorrerão via eventos)
         if (targetHUD != null)
-        {
             targetHUD.SetPokemon(target.GetSaudePokemon(), target);
-        }
+
+        if (currentHoveredTarget == target)
+            currentHoveredTarget = null;
 
         OnTargetSelected?.Invoke(target);
     }
@@ -148,9 +134,7 @@ public class TargetSelectionManager : MonoBehaviour
         }
 
         if (targetHUD != null)
-        {
-            targetHUD.SetVisible(false);
-        }
+            targetHUD.SetVisible(false); // Supondo que você crie um método SetVisible no seu HUD para esconder.
 
         OnTargetDeselected?.Invoke();
     }
@@ -160,7 +144,7 @@ public class TargetSelectionManager : MonoBehaviour
         if (playerTransform == null) return;
 
         var validTargets = allTargets
-            .Where(t => t != null && t.isTargetable && t.IsAlive() && t.isInCombatWithPlayer)
+            .Where(t => t != null && t.isTargetable && t.isInCombatWithPlayer)
             .Where(t => !IsSelfTarget(t))
             .Where(t => t.GetDistanceFrom(playerTransform.position) <= maxTabDistance)
             .OrderBy(t => t.GetDistanceFrom(playerTransform.position))
@@ -185,67 +169,47 @@ public class TargetSelectionManager : MonoBehaviour
             SelectTarget(validTargets[0]);
         }
     }
-
     #endregion
 
     #region Self-Target Check
-
     private bool IsSelfTarget(TargetableEntity target)
     {
         if (target == null) return false;
-        if (PokemonSwitchManager.Instance == null) return false;
 
-        var controlled = PokemonSwitchManager.Instance.GetControlledMember();
-        if (controlled == null) return false;
-
-        if (target.roleHandler != null && target.roleHandler == controlled) return true;
-
-        Transform controlledRoot = controlled.transform.parent != null
-            ? controlled.transform.parent
-            : controlled.transform;
-
-        TargetableEntity controlledEntity = controlledRoot.GetComponentInChildren<TargetableEntity>();
-        if (controlledEntity != null && controlledEntity == target) return true;
+        // Bloqueia apenas quem está sendo explicitamente controlado pelo jogador
+        if (target.roleHandler != null && target.roleHandler.GetCurrentRole() == PokemonRole.PlayerControlled)
+            return true;
 
         return false;
     }
-
     #endregion
 
-    #region Callbacks de Hover
+    #region Callbacks de Hover 
     public void OnTargetHovered(TargetableEntity target)
     {
+        if (target == currentSelectedTarget) return; // Ignora o Hover se já for o selecionado
         currentHoveredTarget = target;
     }
 
     public void OnTargetUnhovered(TargetableEntity target)
     {
         if (currentHoveredTarget == target)
-        {
             currentHoveredTarget = null;
-        }
     }
     #endregion
 
-    #region UI Updates
-    public void RefreshSelectedTargetUI()
-    {
-        if (targetHUD != null && currentSelectedTarget != null)
-        {
-            targetHUD.SetPokemon(currentSelectedTarget.GetSaudePokemon(), currentSelectedTarget);
-        }
-    }
-    #endregion
+    // ❌ A REGIÃO "#region UI Updates" E O MÉTODO RefreshSelectedTargetUI FORAM DELETADOS
 
     #region Getters
     public TargetableEntity GetSelectedTarget() => currentSelectedTarget;
     public TargetableEntity GetHoveredTarget() => currentHoveredTarget;
     public bool HasSelectedTarget() => currentSelectedTarget != null;
     public List<TargetableEntity> GetAllTargets() => new List<TargetableEntity>(allTargets);
+
     public List<TargetableEntity> GetTargetsInRange(Vector3 position, float range)
     {
         return allTargets
-            .Where(t => t != null && t.isTargetable && t.IsAlive())
+            .Where(t => t != null && t.isTargetable)
             .Where(t => t.GetDistanceFrom(position) <= range)
             .OrderBy(t => t.GetDistanceFrom(position))
             .ToList();

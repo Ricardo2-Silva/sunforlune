@@ -221,7 +221,7 @@ public class PokeballLauncher : MonoBehaviour
         pokemonRoot.transform.localScale = Vector3.zero;
 
         // ITEM 1.2: CONGELA A FÍSICA E MOVIMENTO DO POKEMON AO NASCER
-        Rigidbody2D rb = pokemonRoot.GetComponentInChildren<Rigidbody2D>();
+        Rigidbody2D rb = pokemonRoot.GetComponentInChildren<Rigidbody2D>();// não está conseguindo pegar a componente
         if (rb != null)
         {
             rb.velocity = Vector2.zero;
@@ -498,7 +498,10 @@ public class PokeballLauncher : MonoBehaviour
     private PokeballData GetPokeballForPokemon(RoleHandler pokemon)
     {
         if (pokemon == null) return defaultPokeball;
-        Mon mon = pokemon.GetMon();
+
+        // CORRIGIDO: Busca o componente Mon na raiz usando a nova estrutura
+        Mon mon = pokemon.GetComponentInChildren<Mon>();
+
         if (mon != null && mon.IsCaptured && mon.CapturedPokeball != null) return mon.CapturedPokeball;
         return defaultPokeball;
     }

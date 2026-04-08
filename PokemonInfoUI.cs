@@ -4,8 +4,8 @@ using UnityEngine.UI;
 using TMPro;
 
 /// <summary>
-/// HUD para exibir informações de um Pokémon (jogador ou alvo).
-/// SIMPLIFICADO: Removidas redundâncias, fluxo claro.
+/// HUD para exibir informações de um Pokémon.
+/// SIMPLIFICADO: A matemática agora vem estritamente do SaudePokemon.
 /// </summary>
 public class PokemonInfoUI : MonoBehaviour
 {
@@ -34,14 +34,10 @@ public class PokemonInfoUI : MonoBehaviour
     [Header("Configuração")]
     public float lerpSpeed = 5f;
 
-    // Animação das barras
     private float targetHealthFill = 1f;
     private float targetPowerFill = 1f;
 
-    private void Start()
-    {
-        SetVisible(false);
-    }
+    private void Start() => SetVisible(false);
 
     private void Update()
     {
@@ -51,15 +47,10 @@ public class PokemonInfoUI : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Configura o HUD para exibir um Pokémon.
-    /// </summary>
     public void SetPokemon(SaudePokemon saude, TargetableEntity entity = null)
     {
-        // Desregistra eventos anteriores
         UnsubscribeFromEvents();
 
-        // Atualiza referências
         currentPokemon = saude;
         currentEntity = entity;
         currentStatusManager = entity?.GetStatusManager() ?? saude?.GetComponent<StatusEffectManager>();
@@ -70,23 +61,17 @@ public class PokemonInfoUI : MonoBehaviour
             return;
         }
 
-        // Registra novos eventos
         SubscribeToEvents();
-
-        // Atualiza todos os dados
         AtualizarDadosCompletos();
-
         SetVisible(true);
     }
 
-    /// <summary>
-    /// Atualiza nome, portrait, saúde, poder e status de uma vez.
-    /// </summary>
     private void AtualizarDadosCompletos()
     {
         if (currentPokemon == null) return;
 
         AtualizarNomeEPortrait();
+        // Chamada inicial para forçar os valores corretos
         AtualizarSaude(currentPokemon.GetSaudeAtual(), currentPokemon.GetSaudeMaxima());
         AtualizarPoder(currentPokemon.GetPoderAtual(), currentPokemon.GetPoderMaximo());
         AtualizarStatusEffects();
@@ -94,35 +79,18 @@ public class PokemonInfoUI : MonoBehaviour
 
     private void AtualizarNomeEPortrait()
     {
-        Mon mon = null;
-
-        // Tenta obter Mon do entity primeiro, depois do SaudePokemon
-        if (currentEntity != null)
-        {
-            mon = currentEntity.GetMon();
-        }
-
-        if (mon == null && currentPokemon != null)
-        {
-            mon = currentPokemon.GetMon();
-        }
+        Mon mon = currentEntity?.GetMon() ?? currentPokemon?.GetMon();
 
         if (mon != null && mon.Base != null)
         {
-            if (nameText != null)
-                nameText.text = $"{mon.Base.Nome} (Lv.{mon.Nivel})";
-
-            if (portrait != null && mon.Base.Portrait != null)
-                portrait.sprite = mon.Base.Portrait;
+            if (nameText != null) nameText.text = $"{mon.Base.Nome} (Lv.{mon.Nivel})";
+            if (portrait != null && mon.Base.Portrait != null) portrait.sprite = mon.Base.Portrait;
         }
         else
         {
-            if (nameText != null)
-                nameText.text = currentPokemon?.gameObject.name ?? "??? ";
+            if (nameText != null) nameText.text = currentPokemon?.gameObject.name ?? "???";
         }
     }
-
-    #region Eventos
 
     private void SubscribeToEvents()
     {
@@ -130,11 +98,6 @@ public class PokemonInfoUI : MonoBehaviour
         {
             currentPokemon.OnHealthChanged += AtualizarSaude;
             currentPokemon.OnPowerChanged += AtualizarPoder;
-        }
-
-        if (currentEntity != null)
-        {
-            currentEntity.OnStatusEffect += OnStatusEffectChanged;
         }
     }
 
@@ -145,52 +108,30 @@ public class PokemonInfoUI : MonoBehaviour
             currentPokemon.OnHealthChanged -= AtualizarSaude;
             currentPokemon.OnPowerChanged -= AtualizarPoder;
         }
-
-        if (currentEntity != null)
-        {
-            currentEntity.OnStatusEffect -= OnStatusEffectChanged;
-        }
     }
-
-    private void OnStatusEffectChanged(TargetableEntity entity)
-    {
-        AtualizarStatusEffects();
-    }
-
-    #endregion
-
-    #region Atualizações de UI
 
     private void AtualizarSaude(float atual, float max)
     {
-        targetHealthFill = max > 0 ? atual / max : 0f;
-
-        if (healthText != null)
-            healthText.text = $"{Mathf.FloorToInt(atual)} / {Mathf.FloorToInt(max)}";
+        // Pede a normalização direto da fonte
+        targetHealthFill = currentPokemon.GetSaudeNormalizada();
+        if (healthText != null) healthText.text = $"{Mathf.FloorToInt(atual)} / {Mathf.FloorToInt(max)}";
     }
 
     private void AtualizarPoder(float atual, float max)
     {
-        targetPowerFill = max > 0 ? atual / max : 0f;
-
-        if (powerText != null)
-            powerText.text = $"{Mathf.RoundToInt((atual / max) * 100)}%";
+        targetPowerFill = currentPokemon.GetPoderNormalizado();
+        if (powerText != null) powerText.text = $"{Mathf.RoundToInt(currentPokemon.GetPoderPorcentagem())}%";
     }
 
     private void AnimateBars()
     {
-        if (healthBar != null)
-            healthBar.fillAmount = Mathf.Lerp(healthBar.fillAmount, targetHealthFill, lerpSpeed * Time.deltaTime);
-
-        if (powerBar != null)
-            powerBar.fillAmount = Mathf.Lerp(powerBar.fillAmount, targetPowerFill, lerpSpeed * Time.deltaTime);
+        if (healthBar != null) healthBar.fillAmount = Mathf.Lerp(healthBar.fillAmount, targetHealthFill, lerpSpeed * Time.deltaTime);
+        if (powerBar != null) powerBar.fillAmount = Mathf.Lerp(powerBar.fillAmount, targetPowerFill, lerpSpeed * Time.deltaTime);
     }
 
     private void AtualizarStatusEffects()
     {
-        if (statusEffectPanel != null)
-            statusEffectPanel.SetActive(true);
-
+        if (statusEffectPanel != null) statusEffectPanel.SetActive(true);
         LimparIconesStatus();
 
         if (currentStatusManager != null)
@@ -198,10 +139,7 @@ public class PokemonInfoUI : MonoBehaviour
             var activeEffects = currentStatusManager.GetActiveEffects();
             if (activeEffects != null)
             {
-                foreach (var effect in activeEffects)
-                {
-                    AdicionarIconeStatus(effect);
-                }
+                foreach (var effect in activeEffects) AdicionarIconeStatus(effect);
             }
         }
     }
@@ -228,31 +166,11 @@ public class PokemonInfoUI : MonoBehaviour
     {
         foreach (var icon in activeStatusIcons.Values)
         {
-            if (icon != null && icon.gameObject != null)
-                Destroy(icon.gameObject);
+            if (icon != null && icon.gameObject != null) Destroy(icon.gameObject);
         }
         activeStatusIcons.Clear();
     }
 
-    #endregion
-
-    #region Visibilidade
-
-    public void SetVisible(bool visible)
-    {
-        if (mainPanel != null)
-            mainPanel.SetActive(visible);
-    }
-
-    public bool IsVisible()
-    {
-        return mainPanel != null && mainPanel.activeSelf;
-    }
-
-    #endregion
-
-    private void OnDestroy()
-    {
-        UnsubscribeFromEvents();
-    }
+    public void SetVisible(bool visible) { if (mainPanel != null) mainPanel.SetActive(visible); }
+    private void OnDestroy() => UnsubscribeFromEvents();
 }

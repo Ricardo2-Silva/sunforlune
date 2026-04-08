@@ -16,7 +16,7 @@ public class CombatManager : MonoBehaviour
 
     public SaudePokemon saudePokemon;
 
-    private Dictionary<KeyCode, bool> keyHeldDown = new Dictionary<KeyCode, bool>();
+    private Dictionary<KeyCode, bool> keyHeldDown = new Dictionary<KeyCode, bool>();//Novo sistema de keybinds
 
     private void Awake()
     {

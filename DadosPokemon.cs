@@ -1,15 +1,12 @@
-using System.Collections;
 using System.Collections.Generic;
-using Unity.VisualScripting;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "Pokémon", menuName = "Pokémon/Novo Pokémon")]
+[CreateAssetMenu(fileName = "Novo Pokemon", menuName = "Pokemon/Novo Pokemon")]
 public class DadosPokemon : ScriptableObject
 {
     [Header("Dados Principais")]
     [SerializeField] private int numPokedexNacional;
     [SerializeField] private string nome;
-    [SerializeField] private int nivel = 1;
     [SerializeField] private Tipo primeiroTipo;
     [SerializeField] private Tipo segundoTipo;
     [SerializeField] private int grupoOvos;
@@ -17,12 +14,11 @@ public class DadosPokemon : ScriptableObject
     [SerializeField] private string habOculta;
     [SerializeField] private int genero;
     [SerializeField] private DadosPokemon proxEvolucao;
-    [SerializeField] private string natureza;
     [SerializeField] private Sprite portrait;
     [TextArea(15, 20)][SerializeField] private string descricao;
 
     [Header("Dimensões (para VFX / offsets)")]
-    [Tooltip("Altura aproximada do sprite do Pokémon em pixels. Usado para offsets de liberação/recall estilo anime.")]
+    [Tooltip("Altura aproximada do sprite em pixels.")]
     [SerializeField] private int pixelHeight = 64;
 
     [Header("Base Stats")]
@@ -38,30 +34,21 @@ public class DadosPokemon : ScriptableObject
     [SerializeField] private GrowthRate growthRate;
     [SerializeField] private int catchRate = 255;
 
-    [Header("Animadores")]
-    public AnimatorOverrideController curtaDistancia;
-    public AnimatorOverrideController longaDistancia;
-    public AnimatorOverrideController posturaContinua;
-    public AnimatorOverrideController autoCura;
-    public AnimatorOverrideController posturaNormal;
-
     [Header("Ataques aprendidos por nível")]
-    // Novamente: não usamos InfoHabilidade, ataques agora são AttackData via LevelAttackEntry
     public List<LevelAttackEntry> attackDefinitions;
 
     [Header("Evoluções")]
     [SerializeField] private List<Evolucao> evolucoes;
-
 
     private void OnValidate()
     {
         nome = name;
         if (pixelHeight < 1) pixelHeight = 1;
     }
-    // Propriedades simplificadas
+
+    // Propriedades
     public int NumDexNacional => numPokedexNacional;
     public string Nome => nome;
-    public int Nivel => nivel;
     public int GrupoOvos => grupoOvos;
     public bool Evolui => evolui;
     public int Genero => genero;
@@ -83,12 +70,12 @@ public class DadosPokemon : ScriptableObject
     public List<LevelAttackEntry> AttackDefinitions => attackDefinitions;
     public List<Evolucao> Evolucoes => evolucoes;
 
-    public int GetExpForLevel(int nivel)
+    public int GetExpForLevel(int nivelAtual)
     {
         switch (growthRate)
         {
-            case GrowthRate.Rapido: return 4 * (nivel * nivel * nivel) / 5;
-            case GrowthRate.MedioRapido: return nivel * nivel * nivel;
+            case GrowthRate.Rapido: return 4 * (nivelAtual * nivelAtual * nivelAtual) / 5;
+            case GrowthRate.MedioRapido: return nivelAtual * nivelAtual * nivelAtual;
             default: return -1;
         }
     }
